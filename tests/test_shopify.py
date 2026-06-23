@@ -36,3 +36,15 @@ def test_non_shopify_file_is_refused(tmp_path: Path) -> None:
     (tmp_path / "x.csv").write_text("order,amount\n1,5\n")
     with pytest.raises(ExportError, match="missing columns"):
         load_store([tmp_path / "x.csv"])
+
+
+def test_cancelled_and_test_orders_are_excluded_and_counted(tmp_path: Path) -> None:
+    orders = [
+        ORDER,
+        {**ORDER, "name": "#1002", "cancelled": "2025-05-04 09:00:00 -0400"},
+        {**ORDER, "name": "#1003", "email": "QA@fernway.com"},
+    ]
+    store = load_store([write_export(tmp_path / "may.csv", orders)], ["qa@fernway.com"])
+    assert store.query("select order_name from orders") == [("#1001",)]
+    assert store.query("select count(distinct order_name) from order_lines") == [(1,)]
+    assert store.excluded == {"cancelled": 1, "test": 1}
