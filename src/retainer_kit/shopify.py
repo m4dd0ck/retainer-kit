@@ -43,8 +43,11 @@ def _text(column: str) -> str:
     return f"""max(nullif(trim("{column}"), ''))"""
 
 
-def load_store(export_paths: list[Path]) -> Store:
+def load_store(export_paths: list[Path], test_emails: list[str] | None = None) -> Store:
     """Load one or more order exports (overlapping periods are fine).
+
+    Cancelled orders and orders from ``test_emails`` are excluded from the ``orders`` and
+    ``order_lines`` views; how many were dropped is kept in ``Store.excluded`` for the report.
 
     Raises:
         ExportError: If no files are given or required Shopify columns are missing.
@@ -105,6 +108,22 @@ def load_store(export_paths: list[Path]) -> Store:
         from order_rows
         where nullif(trim("Lineitem name"), '') is not null"""
     )
-    connection.execute("create view orders as select * from all_orders")
-    connection.execute("create view order_lines as select * from all_lines")
-    return Store(connection)
+    emails = [e.lower() for e in test_emails or []]
+    connection.execute(
+        "create table excluded_orders as select order_name, "
+        "case when is_cancelled then 'cancelled' else 'test' end as reason "
+        "from all_orders where is_cancelled or list_contains(?, email)",
+        [emails],
+    )
+    connection.execute(
+        "create view orders as select * from all_orders "
+        "where order_name not in (select order_name from excluded_orders)"
+    )
+    connection.execute(
+        "create view order_lines as select * from all_lines "
+        "where order_name not in (select order_name from excluded_orders)"
+    )
+    excluded = dict(
+        connection.execute("select reason, count(*) from excluded_orders group by 1").fetchall()
+    )
+    return Store(connection, {str(k): int(v) for k, v in excluded.items()})
