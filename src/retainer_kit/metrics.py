@@ -113,3 +113,85 @@ def countries(store: Store, month: str, limit: int = 5) -> list[tuple[str, float
         [month, limit],
     )
     return [(str(c), as_float(s)) for c, s in rows]
+
+
+@dataclass(frozen=True)
+class CustomerMix:
+    """New vs returning, where "new" means first order in the exports provided."""
+
+    new_customers: int
+    returning_customers: int
+    new_sales: float
+    returning_sales: float
+    returning_orders: int
+    orders: int
+
+    @property
+    def repeat_order_share(self) -> float:
+        """Share of this month's orders placed by returning customers."""
+        return self.returning_orders / self.orders if self.orders else 0.0
+
+
+FIRST_ORDERS = """
+    select email, min(month) as first_month from orders where email is not null group by email
+"""
+
+
+def customer_mix(store: Store, month: str) -> CustomerMix:
+    row = store.query(
+        f"""with first as ({FIRST_ORDERS})
+        select
+            count(distinct email) filter (where first.first_month = orders.month),
+            count(distinct email) filter (where first.first_month < orders.month),
+            sum(net_sales) filter (where first.first_month = orders.month),
+            sum(net_sales) filter (where first.first_month < orders.month),
+            count(*) filter (where first.first_month < orders.month),
+            count(*)
+        from orders left join first using (email)
+        where orders.month = ?""",
+        [month],
+    )[0]
+    return CustomerMix(
+        new_customers=as_int(row[0]),
+        returning_customers=as_int(row[1]),
+        new_sales=as_float(row[2]),
+        returning_sales=as_float(row[3]),
+        returning_orders=as_int(row[4]),
+        orders=as_int(row[5]),
+    )
+
+
+@dataclass(frozen=True)
+class CohortRow:
+    cohort: str
+    customers: int
+    retention: list[float | None]  # share ordering again k months later; None = not yet happened
+
+
+def cohorts(store: Store, end_month: str, count: int = 6, horizon: int = 6) -> list[CohortRow]:
+    """Customers grouped by first-order month; who ordered again 1..horizon months later."""
+    # The latest ``count`` cohorts that have at least one later month to look at.
+    wanted = [previous_month(end_month, back) for back in range(count, 0, -1)]
+    rows = store.query(
+        f"""with first as ({FIRST_ORDERS}),
+        activity as (select distinct email, month from orders where email is not null)
+        select first.first_month, activity.month, count(distinct activity.email)
+        from first join activity using (email)
+        group by all""",
+    )
+    active: dict[tuple[str, str], int] = {(str(c), str(m)): as_int(n) for c, m, n in rows}
+    result = []
+    for cohort in wanted:
+        size = active.get((cohort, cohort), 0)
+        if not size:
+            continue
+        retention: list[float | None] = []
+        for k in range(1, horizon + 1):
+            later = _add_months(cohort, k)
+            retention.append(None if later > end_month else active.get((cohort, later), 0) / size)
+        result.append(CohortRow(cohort, size, retention))
+    return result
+
+
+def _add_months(month: str, forward: int) -> str:
+    return previous_month(month, back=-forward)

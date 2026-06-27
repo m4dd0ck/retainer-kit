@@ -5,7 +5,15 @@ from pathlib import Path
 import pytest
 from conftest import write_export
 
-from retainer_kit.metrics import countries, month_summary, previous_month, top_products, trend
+from retainer_kit.metrics import (
+    cohorts,
+    countries,
+    customer_mix,
+    month_summary,
+    previous_month,
+    top_products,
+    trend,
+)
 from retainer_kit.shopify import Store, load_store
 
 TENT = ("TENT-1", "Trail tent", 1, "100.00")
@@ -61,3 +69,17 @@ def test_top_products_with_prior_month(store: Store) -> None:
 
 def test_countries(store: Store) -> None:
     assert countries(store, "2025-05") == [("US", 190.0), ("CA", 20.0)]
+
+
+def test_customer_mix(store: Store) -> None:
+    mix = customer_mix(store, "2025-05")
+    assert (mix.new_customers, mix.returning_customers) == (2, 1)  # a@ first ordered in April
+    assert (mix.new_sales, mix.returning_sales) == (90.0, 120.0)
+    assert mix.repeat_order_share == pytest.approx(1 / 3)
+
+
+def test_cohorts_mark_future_months_as_unknown(store: Store) -> None:
+    rows = cohorts(store, "2025-05", count=2, horizon=2)
+    april = next(r for r in rows if r.cohort == "2025-04")
+    assert april.customers == 1
+    assert april.retention == [1.0, None]  # came back in May; June has not happened
