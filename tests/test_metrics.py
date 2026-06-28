@@ -1,9 +1,6 @@
 """Metrics checked against numbers worked out by hand from a small fixture."""
 
-from pathlib import Path
-
 import pytest
-from conftest import write_export
 
 from retainer_kit.metrics import (
     cohorts,
@@ -14,27 +11,7 @@ from retainer_kit.metrics import (
     top_products,
     trend,
 )
-from retainer_kit.shopify import Store, load_store
-
-TENT = ("TENT-1", "Trail tent", 1, "100.00")
-MUG = ("MUG-1", "Camp mug", 2, "10.00")
-
-
-@pytest.fixture
-def store(tmp_path: Path) -> Store:
-    orders = [
-        # April: one order, 100 in sales
-        {"name": "#1", "email": "a@x.com", "created": "2025-04-10", "subtotal": "100",
-         "lines": [TENT]},
-        # May: three orders; one discounted by 20, one refunded 30, one from Canada
-        {"name": "#2", "email": "a@x.com", "created": "2025-05-02", "subtotal": "120",
-         "discount": "20", "code": "SPRING20", "lines": [TENT, MUG]},
-        {"name": "#3", "email": "b@x.com", "created": "2025-05-09", "subtotal": "100",
-         "refunded": "30", "lines": [TENT]},
-        {"name": "#4", "email": "c@x.com", "created": "2025-05-20", "subtotal": "20",
-         "country": "CA", "lines": [MUG]},
-    ]  # fmt: skip
-    return load_store([write_export(tmp_path / "orders.csv", orders)])
+from retainer_kit.shopify import Store
 
 
 def test_previous_month_crosses_years() -> None:
