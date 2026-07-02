@@ -195,3 +195,14 @@ def cohorts(store: Store, end_month: str, count: int = 6, horizon: int = 6) -> l
 
 def _add_months(month: str, forward: int) -> str:
     return previous_month(month, back=-forward)
+
+
+def top_discount_code(store: Store, month: str) -> tuple[str, int] | None:
+    """Most used discount code this month and how many orders used it."""
+    rows = store.query(
+        """select discount_code, count(*) from orders
+        where month = ? and discount_code is not null
+        group by 1 order by 2 desc, 1 limit 1""",
+        [month],
+    )
+    return (str(rows[0][0]), as_int(rows[0][1])) if rows else None
