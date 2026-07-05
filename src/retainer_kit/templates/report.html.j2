@@ -1,0 +1,118 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{{ config.name }} - {{ config.report_title }} - {{ month_title }}</title>
+<style>
+  :root { --brand: {{ config.brand_colour }}; --bg: #fbfaf8; --panel: #fff; --text: #1d1d1f;
+    --muted: #6b6b70; --line: #e6e3de; --up: #1f7a4d; --down: #b42318; }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg: #141415; --panel: #1c1c1e; --text: #ececed; --muted: #a0a0a6; --line: #2e2e31;
+      --up: #6fd3a0; --down: #ff8a80; }
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--text);
+    font: 15px/1.55 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+  main { max-width: 880px; margin: 0 auto; padding: 40px 20px 72px; }
+  header { border-bottom: 3px solid var(--brand); padding-bottom: 14px; margin-bottom: 24px; }
+  header .client { color: var(--brand); font-weight: 700; letter-spacing: .02em; }
+  h1 { font-size: 28px; margin: 4px 0 0; }
+  h2 { font-size: 18px; margin: 36px 0 10px; }
+  .kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(135px, 1fr)); gap: 10px; }
+  .kpi { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 12px 14px; }
+  .kpi span { display: block; color: var(--muted); font-size: 12.5px; }
+  .kpi b { display: block; font-size: 22px; margin: 2px 0; }
+  .kpi small { display: block; font-size: 12px; color: var(--muted); }
+  .good { color: var(--up); } .bad { color: var(--down); }
+  .story { background: var(--panel); border: 1px solid var(--line); border-left: 4px solid var(--brand);
+    border-radius: 10px; padding: 6px 18px; }
+  .story p { margin: 10px 0; }
+  .chart { width: 100%; height: auto; font-size: 12px; fill: var(--muted); }
+  .chart text { fill: var(--muted); } .chart .value { fill: var(--text); font-weight: 600; }
+  .chart .axis { stroke: var(--line); } .chart .target { stroke: var(--muted); stroke-dasharray: 5 4; }
+  .panel { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 14px 16px; }
+  .two { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+  .scroll { overflow-x: auto; }
+  table { border-collapse: collapse; width: 100%; font-size: 13.5px; }
+  th, td { padding: 6px 8px; border-bottom: 1px solid var(--line); text-align: right; white-space: nowrap; }
+  th:first-child, td:first-child { text-align: left; }
+  th { color: var(--muted); font-size: 11.5px; text-transform: uppercase; letter-spacing: .03em; }
+  td.heat { background: color-mix(in srgb, var(--brand) calc(var(--v) * 100%), transparent); }
+  footer { margin-top: 44px; color: var(--muted); font-size: 12.5px; }
+  @media (max-width: 640px) { .two { grid-template-columns: 1fr; } }
+  @media print {
+    :root { --bg: #fff; --panel: #fff; }
+    main { padding: 0; max-width: none; } .panel, .story, .kpi { break-inside: avoid; }
+  }
+</style>
+</head>
+<body>
+<main>
+  <header>
+    <div class="client">{{ config.name }}</div>
+    <h1>{{ config.report_title }}: {{ month_title }}</h1>
+  </header>
+
+  <div class="kpis">
+    {% for k in kpis %}
+    <div class="kpi"><span>{{ k.label }}</span><b>{{ k.value }}</b>
+      {% for label, change in [("vs last month", k.vs_month), ("vs last year", k.vs_year)] %}
+      {% if change is not none %}
+      {% set good = (change >= 0) == k.higher_is_better %}
+      <small><span class="{{ 'good' if good else 'bad' }}" style="display:inline">{{ "{:+.0%}".format(change) }}</span> {{ label }}</small>
+      {% endif %}
+      {% endfor %}
+    </div>
+    {% endfor %}
+  </div>
+
+  <h2>What changed</h2>
+  <div class="story">{% for p in narrative %}<p>{{ p }}</p>{% endfor %}</div>
+
+  <h2>Net sales, last 12 months</h2>
+  <div class="panel">{{ trend | safe }}</div>
+
+  <div class="two">
+    <div>
+      <h2>Best sellers</h2>
+      <div class="panel">{{ product_bars | safe }}</div>
+    </div>
+    <div>
+      <h2>Where sales came from</h2>
+      <div class="panel">{{ country_bars | safe }}</div>
+    </div>
+  </div>
+
+  <h2>Best sellers vs last month</h2>
+  <div class="panel scroll"><table>
+    <tr><th>Product</th><th>Units</th><th>Sales</th><th>Last month</th><th>Change</th></tr>
+    {% for p in products %}
+    <tr><td>{{ p.product }}</td><td>{{ "{:,}".format(p.units) }}</td><td>{{ money(p.sales) }}</td>
+      <td>{{ money(p.prior_sales) }}</td>
+      <td class="{{ 'good' if p.sales >= p.prior_sales else 'bad' }}">{{ money(p.sales - p.prior_sales) }}</td></tr>
+    {% endfor %}
+  </table></div>
+
+  {% if cohorts %}
+  <h2>Do new customers come back?</h2>
+  <div class="panel scroll"><table>
+    <tr><th>First order</th><th>Customers</th>{% for i in range(1, cohorts[0].retention | length + 1) %}<th>+{{ i }} mo</th>{% endfor %}</tr>
+    {% for c in cohorts %}
+    <tr><td>{{ c.cohort }}</td><td>{{ c.customers }}</td>
+      {% for r in c.retention %}
+      {% if r is none %}<td></td>{% else %}<td class="heat" style="--v: {{ '%.2f' | format([r * 2.5, 1] | min) }}">{{ "{:.0%}".format(r) }}</td>{% endif %}
+      {% endfor %}</tr>
+    {% endfor %}
+  </table></div>
+  {% endif %}
+
+  <footer>
+    Net sales = subtotal after discounts, before shipping and tax, less refunds. "New" customers
+    placed their first order in the exports provided ({{ data_from }} to {{ data_to }}).
+    {% if excluded %}Excluded: {% for reason, n in excluded.items() %}{{ n }} {{ reason }} order{{ "s" if n != 1 }}{{ ", " if not loop.last }}{% endfor %}.{% endif %}
+    Generated {{ generated }}.
+  </footer>
+</main>
+</body>
+</html>
