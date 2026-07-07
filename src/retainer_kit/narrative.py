@@ -68,21 +68,7 @@ def write_narrative(facts: NarrativeInputs) -> list[str]:
 
     change = facts.vs_last_month
     if change and facts.prior and abs(change.change) >= 0.01:
-        order_delta = now.orders - facts.prior.orders
-        if abs(change.orders_effect) >= abs(change.aov_effect):
-            reason = (
-                f"{'more' if order_delta > 0 else 'fewer'} orders ({order_delta:+,}, worth about "
-                f"{money(change.orders_effect, cur)})"
-            )
-            other = f"average order value moved to {money(now.aov, cur)}"
-        else:
-            reason = (
-                f"{'larger' if now.aov > facts.prior.aov else 'smaller'} orders (average "
-                f"{money(facts.prior.aov, cur)} to {money(now.aov, cur)}, worth about "
-                f"{money(change.aov_effect, cur)})"
-            )
-            other = f"order count went from {facts.prior.orders:,} to {now.orders:,}"
-        paragraphs.append(f"Most of the change came from {reason}; {other}.")
+        paragraphs.append(_driver_sentence(now, facts.prior, change, cur))
 
     if facts.prior and abs(now.discount_share - facts.prior.discount_share) >= DISCOUNT_SHIFT:
         text = (
@@ -117,3 +103,31 @@ def write_narrative(facts: NarrativeInputs) -> list[str]:
             parts.append(f"biggest drop {drops[0][0]} ({money(drops[0][1], cur)})")
         paragraphs.append(f"By product: {'; '.join(parts)}.")
     return paragraphs
+
+
+def _driver_sentence(now: MonthSummary, prior: MonthSummary, change: SalesChange, cur: str) -> str:
+    """Name the bigger effect, and say so plainly when the two pulled in opposite directions.
+
+    The order-value part includes the interaction term, so the two parts still add up exactly
+    to the change quoted in the headline.
+    """
+    orders_part = change.orders_effect
+    value_part = change.aov_effect + change.interaction
+    order_delta = now.orders - prior.orders
+    orders_text = (
+        f"{'more' if order_delta > 0 else 'fewer'} orders ({order_delta:+,}, about "
+        f"{money(orders_part, cur)})"
+    )
+    value_text = (
+        f"{'larger' if now.aov > prior.aov else 'smaller'} orders (average "
+        f"{money(prior.aov, cur)} to {money(now.aov, cur)}, about {money(value_part, cur)})"
+    )
+    if (orders_part >= 0) == (value_part >= 0):
+        both = f"{orders_text} and {value_text}"
+        return f"Both {both} {'added to' if change.change >= 0 else 'took away from'} sales."
+    main, other = (
+        (orders_text, value_text)
+        if abs(orders_part) >= abs(value_part)
+        else (value_text, orders_text)
+    )
+    return f"{main[0].upper()}{main[1:]} outweighed {other}."
