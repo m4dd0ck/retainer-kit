@@ -1,5 +1,6 @@
 """Small charts as inline SVG: no JavaScript, so the report prints and emails cleanly."""
 
+from collections.abc import Callable
 from datetime import date
 from html import escape
 
@@ -11,7 +12,10 @@ def _label(month: str) -> str:
 
 
 def trend_svg(
-    points: list[tuple[str, float, int]], colour: str, target: float | None = None
+    points: list[tuple[str, float, int]],
+    colour: str,
+    target: float | None = None,
+    format_value: Callable[[float], str] = lambda v: f"{v:,.0f}",
 ) -> str:
     """Net sales per month as a line with the latest month marked, plus an optional target."""
     height, left, bottom, top = 200, 8, 26, 16
@@ -37,9 +41,14 @@ def trend_svg(
         y = xy(0, target)[1]
         parts.append(
             f'<line x1="{left}" x2="{WIDTH - left}" y1="{y:.1f}" y2="{y:.1f}" class="target"/>'
+            f'<text x="{left + 4}" y="{y - 5:.1f}">target {escape(format_value(target))}</text>'
         )
     last_x, last_y = coords[-1]
     parts.append(f'<circle cx="{last_x:.1f}" cy="{last_y:.1f}" r="4.5" fill="{colour}"/>')
+    parts.append(
+        f'<text x="{last_x - 8:.1f}" y="{last_y - 10:.1f}" text-anchor="end" class="value">'
+        f"{escape(format_value(values[-1]))}</text>"
+    )
     for index, (month, _, _) in enumerate(points):
         x = coords[index][0]
         anchor = "start" if index == 0 else "end" if index == len(points) - 1 else "middle"
@@ -51,24 +60,26 @@ def trend_svg(
     return "".join(parts)
 
 
-def bars_svg(rows: list[tuple[str, float, str]], colour: str) -> str:
+def bars_svg(rows: list[tuple[str, float, str]], colour: str, width: int = WIDTH) -> str:
     """Horizontal bars: (label, value, formatted value) per row, largest scale from the data."""
-    row_height, label_width, value_width = 30, 190, 90
+    row_height, value_width = 30, 80
+    label_width = int(width * 0.36)
     height = row_height * len(rows) + 4
     largest = max((value for _, value, _ in rows), default=1.0) or 1.0
-    span = WIDTH - label_width - value_width
+    span = width - label_width - value_width - 8
     parts = [
-        f'<svg viewBox="0 0 {WIDTH} {height}" role="img" class="chart"><title>Bar chart</title>'
+        f'<svg viewBox="0 0 {width} {height}" role="img" class="chart"><title>Bar chart</title>'
     ]
     for index, (label, value, shown) in enumerate(rows):
         y = index * row_height + 4
-        width = max(value, 0) / largest * span
-        short = label if len(label) <= 28 else label[:26] + "…"
+        bar = max(value, 0) / largest * span
+        limit = label_width // 7
+        short = label if len(label) <= limit else label[: limit - 1] + "…"
         parts += [
             f'<text x="0" y="{y + 17}">{escape(short)}</text>',
-            f'<rect x="{label_width}" y="{y + 4}" width="{width:.1f}" height="18" rx="3" '
+            f'<rect x="{label_width}" y="{y + 4}" width="{bar:.1f}" height="18" rx="3" '
             f'fill="{colour}"/>',
-            f'<text x="{WIDTH}" y="{y + 17}" text-anchor="end" class="value">'
+            f'<text x="{width}" y="{y + 17}" text-anchor="end" class="value">'
             f"{escape(shown)}</text>",
         ]
     parts.append("</svg>")
