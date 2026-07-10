@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>RetainerKit - sample monthly reports</title>
+<style>
+  :root { --bg: #fbfaf8; --panel: #fff; --text: #1d1d1f; --muted: #6b6b70; --line: #e6e3de; --brand: #2e5e4e; }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg: #141415; --panel: #1c1c1e; --text: #ececed; --muted: #a0a0a6; --line: #2e2e31; --brand: #8fd1b5; }
+  }
+  body { margin: 0; background: var(--bg); color: var(--text); font: 16px/1.6 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+  main { max-width: 720px; margin: 0 auto; padding: 48px 20px 80px; }
+  h1 { font-size: 30px; margin: 0 0 8px; }
+  .lead { color: var(--muted); margin: 0 0 28px; }
+  a.card { display: block; background: var(--panel); border: 1px solid var(--line); border-left: 4px solid var(--brand);
+    border-radius: 10px; padding: 14px 18px; margin: 12px 0; color: var(--text); text-decoration: none; }
+  a.card b { display: block; font-size: 18px; }
+  a.card span { color: var(--muted); font-size: 14px; }
+  footer { margin-top: 44px; color: var(--muted); font-size: 13px; }
+</style>
+</head>
+<body>
+<main>
+  <h1>RetainerKit</h1>
+  <p class="lead">The monthly report a freelance analyst sends each retainer client, generated from
+    the client's Shopify orders export and one config file. These are three months for a sample
+    outdoor store; May is the interesting one: a promotion brought more orders but lower sales.</p>
+  {% for file, title in reports %}
+  <a class="card" href="{{ file }}"><b>{{ title }}</b><span>Fernway Outdoor - monthly performance</span></a>
+  {% endfor %}
+  <footer>Store and data are synthetic. Code: github.com/m4dd0ck/retainer-kit</footer>
+</main>
+</body>
+</html>
