@@ -25,11 +25,13 @@
   .kpi b { display: block; font-size: 22px; margin: 2px 0; }
   .kpi small { display: block; font-size: 12px; color: var(--muted); }
   .good { color: var(--up); } .bad { color: var(--down); }
+  .kpi .delta { font-style: normal; font-weight: 600; }
   .story { background: var(--panel); border: 1px solid var(--line); border-left: 4px solid var(--brand);
     border-radius: 10px; padding: 6px 18px; }
   .story p { margin: 10px 0; }
   .chart { width: 100%; height: auto; font-size: 12px; fill: var(--muted); }
   .chart text { fill: var(--muted); } .chart .value { fill: var(--text); font-weight: 600; }
+  .chart text { paint-order: stroke; stroke: var(--panel); stroke-width: 4px; stroke-linejoin: round; }
   .chart .axis { stroke: var(--line); } .chart .target { stroke: var(--muted); stroke-dasharray: 5 4; }
   .panel { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 14px 16px; }
   .two { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
@@ -60,7 +62,7 @@
       {% for label, change in [("vs last month", k.vs_month), ("vs last year", k.vs_year)] %}
       {% if change is not none %}
       {% set good = (change >= 0) == k.higher_is_better %}
-      <small><span class="{{ 'good' if good else 'bad' }}" style="display:inline">{{ "{:+.0%}".format(change) }}</span> {{ label }}</small>
+      <small><em class="delta {{ 'good' if good else 'bad' }}">{{ ("{:+.0f} pts".format(change * 100)) if k.is_share else "{:+.0%}".format(change) }}</em> {{ label }}</small>
       {% endif %}
       {% endfor %}
     </div>
@@ -111,7 +113,6 @@
     Net sales = subtotal after discounts, before shipping and tax, less refunds. "New" customers
     placed their first order in the exports provided ({{ data_from }} to {{ data_to }}).
     {% if excluded %}Excluded: {% for reason, n in excluded.items() %}{{ n }} {{ reason }} order{{ "s" if n != 1 }}{{ ", " if not loop.last }}{% endfor %}.{% endif %}
-    Generated {{ generated }}.
   </footer>
 </main>
 </body>

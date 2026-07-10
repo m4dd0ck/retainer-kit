@@ -1,7 +1,6 @@
 """Assemble one client's monthly report from their exports and config."""
 
 from dataclasses import dataclass
-from datetime import date
 from pathlib import Path
 
 from jinja2 import Environment, PackageLoader, select_autoescape
@@ -31,6 +30,10 @@ _env = Environment(
 )
 
 
+# Reason: half-width panels scale a 640-wide chart down until its labels are unreadable.
+HALF_WIDTH = 380
+
+
 class ReportError(ValueError):
     """Raised when a report cannot be produced for the requested month."""
 
@@ -42,10 +45,15 @@ class Kpi:
     vs_month: float | None
     vs_year: float | None
     higher_is_better: bool = True
+    is_share: bool = False  # changes shown in percentage points, not relative percent
 
 
 def _change(now: float, before: float | None) -> float | None:
     return (now - before) / before if before else None
+
+
+def _points(now: float, before: float | None) -> float | None:
+    return None if before is None else now - before
 
 
 def _kpis(
@@ -79,10 +87,18 @@ def _kpis(
         Kpi(
             "Orders from returning",
             f"{mix.repeat_order_share:.0%}",
-            _change(mix.repeat_order_share, prior_mix.repeat_order_share if prior_mix else None),
-            _change(mix.repeat_order_share, year_mix.repeat_order_share if year_mix else None),
+            _points(mix.repeat_order_share, prior_mix.repeat_order_share if prior_mix else None),
+            _points(mix.repeat_order_share, year_mix.repeat_order_share if year_mix else None),
+            is_share=True,
         ),
-        Kpi("Discounts", f"{current.discount_share:.0%}", *pair("discount_share"), False),
+        Kpi(
+            "Discounts",
+            f"{current.discount_share:.0%}",
+            _points(current.discount_share, prior.discount_share if prior else None),
+            _points(current.discount_share, year.discount_share if year else None),
+            higher_is_better=False,
+            is_share=True,
+        ),
     ]
 
 
@@ -115,20 +131,28 @@ def render_report(store: Store, config: ClientConfig, month: str) -> str:
         month_title=month_name(month),
         narrative=narrative,
         kpis=_kpis(current, prior, year, currency, store),
-        trend=trend_svg(trend(store, month), config.brand_colour, config.monthly_sales_target),
+        trend=trend_svg(
+            trend(store, month),
+            config.brand_colour,
+            config.monthly_sales_target,
+            format_value=lambda value: money(value, currency),
+        ),
         products=products,
         product_bars=bars_svg(
-            [(p.product, p.sales, money(p.sales, currency)) for p in products], config.brand_colour
+            [(p.product, p.sales, money(p.sales, currency)) for p in products],
+            config.brand_colour,
+            width=HALF_WIDTH,
         ),
         country_bars=bars_svg(
-            [(c, v, money(v, currency)) for c, v in countries(store, month)], config.brand_colour
+            [(c, v, money(v, currency)) for c, v in countries(store, month)],
+            config.brand_colour,
+            width=HALF_WIDTH,
         ),
         cohorts=cohorts(store, month),
         money=lambda value: money(value, currency),
         excluded=store.excluded,
         data_from=first,
         data_to=last,
-        generated=date.today().isoformat(),
     )
 
 

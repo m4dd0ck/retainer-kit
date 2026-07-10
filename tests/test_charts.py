@@ -10,7 +10,7 @@ def test_trend_is_valid_svg_with_every_month_labelled() -> None:
     labels = [el.text for el in root.iter("{http://www.w3.org/2000/svg}text")] or [
         el.text for el in root.iter("text")
     ]
-    assert labels[0] == "Jan" and labels[-1] == "Dec"
+    assert {"Jan", "Dec", "target 9,000", "12,000"} <= set(labels)
     assert 'class="target"' in svg
 
 
