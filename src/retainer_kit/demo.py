@@ -82,7 +82,10 @@ def build_demo_client(client_dir: Path, seed: int = 21) -> Path:
         for _ in range(orders):
             number += 1
             if customers and rng.random() < returning_chance:
-                email, country = rng.choice(customers)
+                # Reason: recent buyers are far likelier to come back than ones from a year ago;
+                # an exponential pick over customer age gives a smooth retention curve.
+                age = min(int(rng.expovariate(1 / 1200)), len(customers) - 1)
+                email, country = customers[-1 - age]
             else:
                 country = rng.choices(list(COUNTRIES), weights=list(COUNTRIES.values()))[0]
                 email = f"customer{len(customers) + 1}@mail.example"
