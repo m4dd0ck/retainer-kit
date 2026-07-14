@@ -25,6 +25,6 @@ data/
 # Built demo site
 site/
 
-# Generated client folders and reports
-clients/*/reports/
+# Real client folders hold customer data (exports, reports): never commit them
+clients/
 demo_clients/

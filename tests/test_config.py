@@ -27,3 +27,8 @@ def test_invalid_values_are_reported_with_the_file(tmp_path: Path) -> None:
 def test_test_emails_are_normalised(tmp_path: Path) -> None:
     (tmp_path / "client.toml").write_text('name = "X"\ntest_order_emails = [" QA@Shop.com "]\n')
     assert load_config(tmp_path).test_order_emails == ["qa@shop.com"]
+
+
+def test_names_with_quotes_and_backslashes_round_trip(tmp_path: Path) -> None:
+    init_client(tmp_path, 'Acme "Goods" \\ Co\\')
+    assert load_config(tmp_path).name == 'Acme "Goods" \\ Co\\'
