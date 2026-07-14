@@ -1,5 +1,6 @@
 """Each client is described by one ``client.toml`` next to their exports."""
 
+import json
 import tomllib
 from pathlib import Path
 
@@ -9,7 +10,7 @@ CONFIG_FILE = "client.toml"
 
 TEMPLATE = """\
 # Monthly report settings for this client.
-name = "{name}"
+name = {name}
 currency = "USD"                    # shown on the report; exports are not converted
 report_title = "Monthly performance"
 brand_colour = "#2e5e4e"            # accent colour on the report
@@ -57,5 +58,7 @@ def init_client(client_dir: Path, name: str) -> Path:
     if path.exists():
         raise ConfigError(f"{path} already exists")
     (client_dir / "exports").mkdir(parents=True, exist_ok=True)
-    path.write_text(TEMPLATE.format(name=name.replace('"', "'")))
+    # Reason: a JSON string is a valid TOML basic string, so quotes and backslashes in the
+    # name are escaped correctly.
+    path.write_text(TEMPLATE.format(name=json.dumps(name)))
     return path

@@ -20,6 +20,10 @@ REQUIRED_COLUMNS = [
 ]  # fmt: skip
 
 
+# Years of exports for a small store are tens of MB; anything this large is a wrong file.
+MAX_EXPORT_BYTES = 500 * 1024 * 1024
+
+
 class ExportError(ValueError):
     """Raised when the files are not Shopify order exports."""
 
@@ -54,6 +58,9 @@ def load_store(export_paths: list[Path], test_emails: list[str] | None = None) -
     """
     if not export_paths:
         raise ExportError("No order exports found")
+    total = sum(path.stat().st_size for path in export_paths)
+    if total > MAX_EXPORT_BYTES:
+        raise ExportError(f"Exports total {total // 2**20} MB; expected under 500 MB")
     connection = duckdb.connect()
     connection.execute(
         """create table raw_rows as

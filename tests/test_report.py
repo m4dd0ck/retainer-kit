@@ -39,3 +39,9 @@ def test_report_is_written_with_escaped_names_and_exclusions(client: Path) -> No
 def test_month_without_orders_is_refused(client: Path) -> None:
     with pytest.raises(ReportError, match="No orders in 2025-08"):
         build_report(client, "2025-08")
+
+
+@pytest.mark.parametrize("month", ["../../x", "2025-5", "2025-13", "2025-05/../../x"])
+def test_month_must_be_year_and_month(client: Path, month: str) -> None:
+    with pytest.raises(ReportError, match="Month must look like"):
+        build_report(client, month)

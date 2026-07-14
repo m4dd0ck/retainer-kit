@@ -1,5 +1,6 @@
 """Assemble one client's monthly report from their exports and config."""
 
+import re
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -156,8 +157,16 @@ def render_report(store: Store, config: ClientConfig, month: str) -> str:
     )
 
 
+def check_month(month: str) -> str:
+    """``YYYY-MM`` or ReportError; the value becomes part of the output file name."""
+    if not re.fullmatch(r"\d{4}-(0[1-9]|1[0-2])", month):
+        raise ReportError(f"Month must look like 2025-05, got {month!r}")
+    return month
+
+
 def build_report(client_dir: Path, month: str) -> Path:
     """Write ``client_dir/reports/<month>.html`` from the client's config and exports."""
+    check_month(month)
     config = load_config(client_dir)
     exports = sorted((client_dir / "exports").glob("*.csv"))
     store = load_store(exports, config.test_order_emails if config.exclude_test_orders else [])
