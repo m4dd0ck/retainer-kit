@@ -1,6 +1,6 @@
 [project]
 name = "retainer-kit"
-version = "0.1.0"
+version = "1.0.0"
 description = "The monthly e-commerce report a freelance analyst delivers on retainer, templated per client from a Shopify orders export."
 requires-python = ">=3.12"
 dependencies = [
