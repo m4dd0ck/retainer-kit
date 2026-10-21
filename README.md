@@ -32,6 +32,13 @@ Needs Python 3.12+ and [uv](https://github.com/astral-sh/uv).
 
 ```bash
 uv sync
+uv run retainer demo                                      # the sample store, demo_clients/fernway
+uv run retainer report demo_clients/fernway --month 2025-05
+```
+
+For a client:
+
+```bash
 uv run retainer init clients/acme --name "Acme Goods"   # folder + starter client.toml
 # put Shopify "Export orders" CSVs in clients/acme/exports/ (overlapping months are fine)
 uv run retainer report clients/acme --month 2025-05     # -> clients/acme/reports/2025-05.html
@@ -50,9 +57,6 @@ test_order_emails = ["test@acme.example"]
 ```
 
 `clients/` is gitignored: client exports hold customer emails and never belong in the repo.
-
-Try it on the sample store: `uv run retainer demo` then
-`uv run retainer report demo_clients/fernway --month 2025-05`.
 
 ## Commands
 
@@ -168,7 +172,6 @@ The full list is `RUNBOOK.md` §Validate. Paths the docs name that never exist i
 - `RUNBOOK.md`: on open, on close, the monthly report, release, deploy, restore.
 - `CLAUDE.md`: rules for agents working here.
 - `TASK.md`: what is open.
-- `~/developer/hq/CONVENTIONS.md`: release and commit conventions across the owner's repos.
 
 ## License
 

@@ -35,8 +35,6 @@ in exports and run the monthly procedure.
 
 ## Release
 
-Conventions in `~/developer/hq/CONVENTIONS.md` §Versioning.
-
 1. Bump `version` in `pyproject.toml` and `__version__` in `src/retainer_kit/__init__.py` to the
    same value; `uv lock`.
 2. Commit `chore: Release vX.Y.Z`, then `git tag -a vX.Y.Z -m "vX.Y.Z"` and
@@ -53,7 +51,7 @@ was never enabled, set the source to "GitHub Actions" in the repo settings once.
 
 ## Restore on a new machine
 
-1. Clone `git@github.com:m4dd0ck/retainer-kit.git`; `uv sync`.
+1. Clone `https://github.com/m4dd0ck/retainer-kit.git`; `uv sync`.
 2. No secrets, no data in the repo. Client folders come from wherever the analyst keeps them.
 3. `uv run retainer demo` recreates the sample store.
 
@@ -64,5 +62,4 @@ uv run ruff check . && uv run ruff format --check .
 uv run mypy src/
 uv run pytest
 uv run retainer site --out site
-python3 ~/.claude/scripts/doc-check.py --repo .
 ```
