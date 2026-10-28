@@ -68,7 +68,7 @@ def build_demo_client(client_dir: Path, seed: int = 21) -> Path:
     """Write client.toml and one export per month under ``client_dir``."""
     rng = random.Random(seed)
     (client_dir / "exports").mkdir(parents=True, exist_ok=True)
-    (client_dir / CONFIG_FILE).write_text(CLIENT_TOML)
+    (client_dir / CONFIG_FILE).write_text(CLIENT_TOML, encoding="utf-8")
     customers: list[tuple[str, str]] = []  # (email, country)
     number = 1000
     for index, month_start in enumerate(_months()):

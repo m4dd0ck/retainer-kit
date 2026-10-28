@@ -47,7 +47,9 @@ def load_config(client_dir: Path) -> ClientConfig:
     if not path.is_file():
         raise ConfigError(f"No {CONFIG_FILE} in {client_dir}; run `retainer init {client_dir}`")
     try:
-        return ClientConfig.model_validate(tomllib.loads(path.read_text()))
+        # Reason: TOML is UTF-8 by spec; reading bytes avoids the platform's default encoding.
+        with path.open("rb") as handle:
+            return ClientConfig.model_validate(tomllib.load(handle))
     except (tomllib.TOMLDecodeError, ValidationError) as error:
         raise ConfigError(f"{path}: {error}") from error
 
@@ -60,5 +62,5 @@ def init_client(client_dir: Path, name: str) -> Path:
     (client_dir / "exports").mkdir(parents=True, exist_ok=True)
     # Reason: a JSON string is a valid TOML basic string, so quotes and backslashes in the
     # name are escaped correctly.
-    path.write_text(TEMPLATE.format(name=json.dumps(name)))
+    path.write_text(TEMPLATE.format(name=json.dumps(name)), encoding="utf-8")
     return path

@@ -33,6 +33,10 @@ def build_site(out_dir: Path) -> Path:
             shutil.copy(build_report(client, month), out_dir / f"{month}.html")
     reports = [(f"{m}.html", month_name(m)) for m in SAMPLE_MONTHS]
     index = out_dir / "index.html"
-    index.write_text(_env.get_template("site_index.html.j2").render(reports=reports))
-    (out_dir / SITE_MARKER).write_text("Built by retainer site; safe to delete.\n")
+    index.write_text(
+        _env.get_template("site_index.html.j2").render(reports=reports), encoding="utf-8"
+    )
+    (out_dir / SITE_MARKER).write_text(
+        "Built by retainer site; safe to delete.\n", encoding="utf-8"
+    )
     return index
